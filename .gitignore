@@ -1,4 +1,5 @@
-datasets/**
+# datasets/**
 checkpoints/**
 .trash/**
-datasets
+datasets/**
+__pycache__
