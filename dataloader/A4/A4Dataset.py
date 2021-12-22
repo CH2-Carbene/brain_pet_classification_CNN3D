@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import scipy
 
-A4DIR="../../datasets/A4/"
+A4DIR="datasets/A4/"
 
 def ndresize(x:np.ndarray,tg_shape):
     orisize=np.array(x.shape)
@@ -141,7 +141,7 @@ def load_data(csv_name,target_column,max_size=-1):
     '''load data from document/fileName.csv. y is target_column
     '''
     c_bid,c_y="BID",target_column
-    unusableBID_set=set(pd.read_csv("./unusable.csv"))
+    unusableBID_set=set(pd.read_csv(os.path.join(A4DIR,"./unusable.csv")))
     df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid,c_y]]
     df=df.drop_duplicates()
     if True in set(df.duplicated([c_bid])):
