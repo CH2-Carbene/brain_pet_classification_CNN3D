@@ -1,6 +1,6 @@
 # datasets/**
 checkpoints/**
 .trash/**
-datasets/**
+datasets
 __pycache__
 try.ipynb
