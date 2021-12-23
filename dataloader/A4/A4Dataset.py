@@ -213,8 +213,12 @@ def preprocess_save_target(save_dir,csv_name,target_column,prefunc):
     bid_coldict={line[c_bid]:line[c_y]for line in df.iloc()}
     bidlist=np.loadtxt(os.path.join(save_dir,"bid.txt"),dtype=str)
     # print(bidlist)
-    y=[prefunc(bid_coldict[bid])for bid in bidlist]
-    np.save(os.path.join(save_dir,"target"),np.array(y))
+    y=np.array([prefunc(bid_coldict[bid])for bid in bidlist])
+    savefile=os.path.join(save_dir,"target.npy")
+    np.save(savefile,y)
+
+    print(y.shape)
+    return savefile
 
 
 def preprocess_save_img(x,save_dir,ag_rate=0):
@@ -242,11 +246,12 @@ def preprocess_save_img(x,save_dir,ag_rate=0):
     if not os.path.exists(save_dir):os.makedirs(save_dir)
 
     reslist=np.array(reslist)
-    np.savetxt(os.path.join(save_dir,"bid.txt"),bidlist,fmt="%s")
-    np.save(os.path.join(save_dir,"dataset"),reslist)
-    
+    np.savetxt(os.path.join(save_dir,"bid.txt"),bidlist,fmt="%s")#dont let newline=','or ' ',or you will get into trouble
+    savefile=os.path.join(save_dir,"dataset.npy")
+    np.save(savefile,reslist)
+
     print(reslist.shape)
-    
+    return savefile
     # return np.array(reslist)
 
 
@@ -269,7 +274,7 @@ def total_test():
     for i,j in test_d:print(i.shape,np.max(i),j.shape)
 def test_save():
     x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE",10)
-    preprocess_save_img(x,"datasets/A4/train",4)
+    print(preprocess_save_img(x,"datasets/A4/train",4))
 def test_target():
     d={
         "save_dir":"datasets/A4/train",
@@ -277,7 +282,7 @@ def test_target():
         "target_column":"SCORE",
         "prefunc":lambda x:1 if x[0]=="p"else 0
     }
-    preprocess_save_target(**d)
+    print(preprocess_save_target(**d))
     print(np.load("datasets/A4/train/dataset.npy").shape)
     print(np.load("datasets/A4/train/target.npy").shape)
 if __name__ == '__main__':
