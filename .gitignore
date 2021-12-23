@@ -3,3 +3,4 @@ checkpoints/**
 .trash/**
 datasets/**
 __pycache__
+try.ipynb

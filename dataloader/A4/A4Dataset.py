@@ -1,3 +1,4 @@
+from numpy.lib.npyio import load
 from tensorflow.keras.utils import Sequence 
 import nibabel as nib
 import os
@@ -34,15 +35,22 @@ def random_padcut3d(x:np.ndarray,rate,random_seed=None):
     # dtlist=[np.pad]
     return x
 
+load_dict={}
+normalize=lambda x:(x-x.mean())/x.std()
 def loadA4img(bid,ag=False,random_seed=None):
     '''load one A4 img, and can random argument.
     '''
-    normalize=lambda x:(x-x.mean())/x.std()
-    dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
-    filename=sorted(os.listdir(dirname))[0]
-    fullpath=os.path.join(dirname,filename)
-    ngz=nib.load(fullpath)
-    x=normalize(ngz.get_fdata())
+
+    if bid not in load_dict:
+        dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
+        filename=sorted(os.listdir(dirname))[0]
+        fullpath=os.path.join(dirname,filename)
+        ngz=nib.load(fullpath)
+        x=normalize(ngz.get_fdata())
+        load_dict[bid]=x
+    else:
+        print("{} in dir!".format(bid))
+    x=load_dict[bid]
     if ag:x=random_padcut3d(x,0.15,random_seed)
     x=ndresize(x,(42,50,42))
     return x
@@ -182,6 +190,33 @@ def load_data(csv_name,target_column,max_size=-1):
     print("Total data number:{}".format(len(x)))
     print("unusable BID:{}".format(unusable))
     return x,y
+
+def preprocess_save_img(x,save_dir,ag_rate=0):
+    reslist=[]
+    with tqdm(total=len(x)) as pbar:
+        for bid in x:
+            dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
+            filename=sorted(os.listdir(dirname))[0]
+            fullpath=os.path.join(dirname,filename)
+            ngz=nib.load(fullpath)
+            d=normalize(ngz.get_fdata())
+            # load_dict[bid]=x
+            # x=load_dict[bid]
+            for i in range(ag_rate+1):
+                p=d
+                if i!=0:p=random_padcut3d(d,0.15)
+                p=ndresize(p,(42,50,42))
+                reslist.append(p)
+            pbar.update(1)
+    # print(reslist)
+    np.random.shuffle(reslist)
+    reslist=np.array(reslist)
+
+    if not os.path.exists(save_dir):os.makedirs(save_dir)
+    np.save(os.path.join(save_dir,"dataset"),reslist)
+    print(reslist.shape)
+    
+    # return np.array(reslist)
 
 
 def test1():
