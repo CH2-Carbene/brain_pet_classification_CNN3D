@@ -1,3 +1,4 @@
+from math import nan
 from numpy.lib.npyio import load
 from tensorflow.keras.utils import Sequence 
 import nibabel as nib
@@ -7,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 import scipy
 import random
-
+# import math
 A4DIR="datasets/A4/"
 
 def ndresize(x:np.ndarray,tg_shape):
@@ -167,7 +168,11 @@ def load_data(csv_name,target_column=None,max_size=-1):
             if len(x)==max_size:
                 break
             try:
+
                 bid=line[c_bid]
+                if c_y is not None:
+                    if pd.isna(line[c_y]):
+                        raise Exception("BID_{} with NaN value in {}".format(bid,c_y))
                 if bid in unusableBID_set:raise Exception("BID_{} in unusable list".format(bid))
 
                 dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
