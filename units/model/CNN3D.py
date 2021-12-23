@@ -45,10 +45,10 @@ def Merge():
 def Liner(units,activation=None):
     return layers.Dense(units,activation=activation)
 
-def CNN3D():
+def CNN3D(cls_num=2):
     ''' Return a 3D-CNN model for classification.
     input shape:(42,50,42,1)
-    output shape:(2)
+    output shape:(cls_num)
     '''
     L0=Sequential([
         Conv3D_BN(15),
@@ -88,7 +88,7 @@ def CNN3D():
         Liner(300,'relu'),
         layers.Dropout(0.2),
         Liner(50,'relu'),
-        Liner(2)
+        Liner(cls_num)
     ],name="FC")
     CLF=layers.Softmax()
 
