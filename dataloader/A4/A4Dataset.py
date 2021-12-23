@@ -6,6 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 import scipy
+import random
 
 A4DIR="datasets/A4/"
 
@@ -145,12 +146,15 @@ class A4Dataset_test(Sequence):
         return np.array(batch_x),np.array(batch_y)
         
 
-def load_data(csv_name,target_column,max_size=-1):
+def load_data(csv_name,target_column=None,max_size=-1):
     '''load data from document/fileName.csv. y is target_column
     '''
     c_bid,c_y="BID",target_column
     unusableBID_set=set(pd.read_csv(os.path.join(A4DIR,"./unusable.csv")))
-    df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid,c_y]]
+    if c_y is None:
+        df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid]]
+    else:
+        df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid,c_y]]
     df=df.drop_duplicates()
     if True in set(df.duplicated([c_bid])):
         raise Exception("Different {} with same BID!".format(c_y))
@@ -163,7 +167,7 @@ def load_data(csv_name,target_column,max_size=-1):
             if len(x)==max_size:
                 break
             try:
-                bid,ly=line[c_bid],line[c_y]
+                bid=line[c_bid]
                 if bid in unusableBID_set:raise Exception("BID_{} in unusable list".format(bid))
 
                 dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
@@ -176,7 +180,9 @@ def load_data(csv_name,target_column,max_size=-1):
                     raise Exception("BID_{} image data too small".format(bid))
                 ngz=nib.load(fullpath)
                 x.append(bid)
-                y.append(ly)
+                if c_y is not None:
+                # ly,line[c_y]
+                    y.append(line[c_y])
 
             except Exception as e:
                 # print(e)
@@ -189,10 +195,30 @@ def load_data(csv_name,target_column,max_size=-1):
     # self.batch_size=batch_size
     print("Total data number:{}".format(len(x)))
     print("unusable BID:{}".format(unusable))
-    return x,y
+    if c_y is not None:
+        return x,y
+    else:
+        return x
+
+def preprocess_save_target(save_dir,csv_name,target_column,prefunc):
+    # print(csv_name)
+    dirname=os.path.join(A4DIR,save_dir)
+    c_bid,c_y="BID",target_column
+    # unusableBID_set=set(pd.read_csv(os.path.join(A4DIR,"./unusable.csv")))
+    df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid,c_y]]
+    df=df.drop_duplicates()
+    if True in set(df.duplicated([c_bid])):
+        raise Exception("Different {} with same BID!".format(c_y))
+    
+    bid_coldict={line[c_bid]:line[c_y]for line in df.iloc()}
+    bidlist=np.loadtxt(os.path.join(save_dir,"bid.txt"),dtype=str)
+    # print(bidlist)
+    y=[prefunc(bid_coldict[bid])for bid in bidlist]
+    np.save(os.path.join(save_dir,"target"),np.array(y))
+
 
 def preprocess_save_img(x,save_dir,ag_rate=0):
-    reslist=[]
+    bidlist,reslist=[],[]
     with tqdm(total=len(x)) as pbar:
         for bid in x:
             dirname=os.path.join(A4DIR,"A4_aligned/{}/Florbetapir/").format(bid)
@@ -206,27 +232,34 @@ def preprocess_save_img(x,save_dir,ag_rate=0):
                 p=d
                 if i!=0:p=random_padcut3d(d,0.15)
                 p=ndresize(p,(42,50,42))
+                bidlist.append(bid)
                 reslist.append(p)
+
             pbar.update(1)
     # print(reslist)
-    np.random.shuffle(reslist)
-    reslist=np.array(reslist)
+    # np.random.shuffle(reslist,)
 
     if not os.path.exists(save_dir):os.makedirs(save_dir)
+
+    reslist=np.array(reslist)
+    np.savetxt(os.path.join(save_dir,"bid.txt"),bidlist,fmt="%s")
     np.save(os.path.join(save_dir,"dataset"),reslist)
+    
     print(reslist.shape)
     
     # return np.array(reslist)
 
 
 def test1():
-    x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE")
+    x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE",max_size=100)
     print(len(x),len(y))
+    x=load_data("A4_PETVADATA_PRV2.csv",max_size=100)
+    print(len(x))
 def test_2():
     print(random_padcut3d(np.random.random((100,100,100)),rate=0.15,random_seed=114514).shape)
     print(loadA4img("B10018169",False).shape)
 def total_test():
-    x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE",100)
+    x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE",10)
     train_d=A4Dataset_train(x,y,64,ag_rate=4)
     print(train_d.len)
     for i,j in train_d:print(i.shape,np.max(i),j.shape)
@@ -234,6 +267,20 @@ def total_test():
     test_d=A4Dataset_test(x,y)
     print(test_d.len)
     for i,j in test_d:print(i.shape,np.max(i),j.shape)
-
+def test_save():
+    x,y=load_data("A4_PETVADATA_PRV2.csv","SCORE",10)
+    preprocess_save_img(x,"datasets/A4/train",4)
+def test_target():
+    d={
+        "save_dir":"datasets/A4/train",
+        "csv_name":"A4_PETVADATA_PRV2.csv",
+        "target_column":"SCORE",
+        "prefunc":lambda x:1 if x[0]=="p"else 0
+    }
+    preprocess_save_target(**d)
+    print(np.load("datasets/A4/train/dataset.npy").shape)
+    print(np.load("datasets/A4/train/target.npy").shape)
 if __name__ == '__main__':
-   total_test()
+    test_save()
+    test_target()
+    # test_save()
