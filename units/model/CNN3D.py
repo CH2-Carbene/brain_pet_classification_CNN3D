@@ -46,10 +46,13 @@ def Liner(units,activation=None):
     return layers.Dense(units,activation=activation)
 
 def CNN3D(cls_num=2):
-    ''' Return a 3D-CNN model for classification.
+    ''' Return a 3D-CNN model for classification/regression.
     input shape:(42,50,42,1)
     output shape:(cls_num)
+    Args:
+      cls_num: int, should be >=1. When cls_num is 1, it's a regression model.
     '''
+    is_reg=True if cls_num==1 else False
     L0=Sequential([
         Conv3D_BN(15),
         Conv3D_P1(15)
@@ -113,11 +116,12 @@ def CNN3D(cls_num=2):
 
     lfc=FC(l4_x)
 
-    outputs=CLF(lfc)
+    outputs=lfc if is_reg else CLF(lfc)
 
     opt=optimizers.Adadelta()
-    loss_func=losses.SparseCategoricalCrossentropy()
-    metric=[metrics.SparseCategoricalAccuracy()]
+    
+    loss_func=losses.mse if is_reg else losses.SparseCategoricalCrossentropy()
+    metric=[metrics.RootMeanSquaredError() if is_reg else metrics.SparseCategoricalAccuracy()]
 
     model=Model(inputs=inputs, outputs=outputs)
     model.compile(optimizer=opt,loss=loss_func,metrics=metric)
