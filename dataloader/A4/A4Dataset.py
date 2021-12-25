@@ -205,12 +205,12 @@ def load_data(csv_name,target_column=None,max_size=-1):
     else:
         return x
 
-def preprocess_save_target(save_dir,csv_name,target_column,prefunc):
+def preprocess_save_target(save_dir,filename,target_column,prefunc):
     # print(csv_name)
     dirname=os.path.join(A4DIR,save_dir)
     c_bid,c_y="BID",target_column
     # unusableBID_set=set(pd.read_csv(os.path.join(A4DIR,"./unusable.csv")))
-    df=pd.read_csv(os.path.join(A4DIR,"./document",csv_name))[[c_bid,c_y]]
+    df=pd.read_csv(os.path.join(A4DIR,"./document",filename+".csv"))[[c_bid,c_y]]
     df=df.drop_duplicates()
     if True in set(df.duplicated([c_bid])):
         raise Exception("Different {} with same BID!".format(c_y))
